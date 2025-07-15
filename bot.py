@@ -1656,156 +1656,6 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-# async def send_order_to_group(application, session, user_id):
-#     """Buyurtmani guruhga spetsifikatsiya sifatida yuborish"""
-#     try:
-#         # Excel fayl yaratish
-#         wb = openpyxl.Workbook()
-#         ws = wb.active
-#         ws.title = "Спецификация"
-
-#         # Sana
-#         ws.cell(row=1, column=2, value=f"Сана: {datetime.now().strftime('%d.%m.%Y')}").font = Font(bold=True)
-
-#         # Dorixona (pharmacy) ma'lumotlari
-#         pharmacy = session.current_pharmacy
-#         ws.cell(row=2, column=2, value=f"Приложение к дог №: {pharmacy['dagovor']}").font = Font(bold=True)
-
-#         # Поставщик
-#         supplier_data = [
-#             "ПОСТАВЩИК: MCHJ \"GYNOMEDIX\"",
-#             "АДРЕС: Toshkent shaxri Chilonzor tumani. Dumbirobod 4 tor kuchasi 23/2",
-#             "ТЕЛ.: 99 830-23-30",
-#             "ИНН: 311818897",
-#             "Р/с: 2020 8000 1071 8525 5001 МФО: 01095",
-#             "Регист. код плател. НДС: 326060260809"
-#         ]
-#         for idx, data in enumerate(supplier_data):
-#             ws.cell(row=3 + idx, column=1, value=data).font = Font(bold=True)
-
-#         # Покупатель
-#         mfo_value = pharmacy.get('mfo', 'N/A')
-#         mfo_formatted = str(int(float(mfo_value))).zfill(5) if mfo_value != 'N/A' and str(mfo_value).replace('.0', '').isdigit() else str(mfo_value)
-
-#         buyer_data = [
-#             f"ПОКУПАТЕЛЬ: {pharmacy['dorixona_nomi']}",
-#             f"АДРЕС: {pharmacy['manzil']}",
-#             f"ТЕЛ.: {pharmacy.get('telefon', 'N/A')}",
-#             f"ИНН: {pharmacy['inn']}",
-#             f"Р/с: {pharmacy.get('rs', 'N/A')}",
-#             f"банк мфо: {mfo_formatted}"
-#         ]
-#         for idx, data in enumerate(buyer_data):
-#             ws.cell(row=3 + idx, column=7, value=data).font = Font(bold=True)
-
-#         # Jadval
-#         table_start_row = 3 + max(len(supplier_data), len(buyer_data)) + 2
-#         headers = ["Товар", "ИКПУ", "Количество", "Цена", "Сумма без НДС", "НДС (12%)", "Скидка", "Итоговая сумма"]
-#         for col, header in enumerate(headers, 1):
-#             cell = ws.cell(row=table_start_row, column=col, value=header)
-#             cell.font = Font(bold=True)
-#             cell.alignment = Alignment(horizontal='center')
-
-#         # Ma'lumotlar
-#         current_row = table_start_row + 1
-#         total_original = total_nds = total_discount = total_final = 0
-
-#         for item in session.current_order:
-#             price_wo_nds = item['price'] / 1.12
-#             nds = item['price'] - price_wo_nds
-#             total_wo_nds = price_wo_nds * item['quantity']
-#             total_nds_item = nds * item['quantity']
-#             discount = item['total'] * session.discount_percentage / 100
-#             final = item['total'] - discount
-
-#             total_original += item['total']
-#             total_nds += total_nds_item
-#             total_discount += discount
-#             total_final += final
-
-#             ws.cell(row=current_row, column=1, value=item['name'])
-#             ws.cell(row=current_row, column=2, value=item['ikpu'])
-#             ws.cell(row=current_row, column=3, value=item['quantity'])
-#             ws.cell(row=current_row, column=4, value=round(item['price'], 2))
-#             ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
-#             ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
-#             ws.cell(row=current_row, column=7, value=round(discount, 2))
-#             ws.cell(row=current_row, column=8, value=round(final, 2))
-#             current_row += 1
-
-#         # Итого
-#         ws.cell(row=current_row, column=4, value="ИТОГО:").font = Font(bold=True)
-#         ws.cell(row=current_row, column=5, value=round(total_original / 1.12, 2)).font = Font(bold=True)
-#         ws.cell(row=current_row, column=6, value=round(total_nds, 2)).font = Font(bold=True)
-#         ws.cell(row=current_row, column=7, value=round(total_discount, 2)).font = Font(bold=True)
-#         ws.cell(row=current_row, column=8, value=round(total_final, 2)).font = Font(bold=True)
-
-#         # Imzolar
-#         signature_row = current_row + 3
-#         ws.cell(row=signature_row, column=1, value="ПОСТАВЩИК").font = Font(bold=True)
-#         ws.cell(row=signature_row + 1, column=1, value="Директор: RAXMONOV P.M. _______________").font = Font(bold=True)
-#         ws.cell(row=signature_row + 2, column=1, value="М.П").font = Font(bold=True)
-
-#         ws.cell(row=signature_row, column=7, value="ПОКУПАТЕЛЬ").font = Font(bold=True)
-#         ws.cell(row=signature_row + 1, column=7, value="Директор: ____________________").font = Font(bold=True)
-#         ws.cell(row=signature_row + 2, column=7, value="М.П").font = Font(bold=True)
-
-#         # Chegaralar
-#         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-#         for row in range(table_start_row, current_row + 1):
-#             for col in range(1, 9):
-#                 ws.cell(row=row, column=col).border = thin_border
-
-#         # Kengliklar
-#         ws.column_dimensions['A'].width = 50
-#         ws.column_dimensions['B'].width = 20
-#         ws.column_dimensions['G'].width = 50
-#         for i, w in enumerate([30, 15, 12, 12, 15, 12, 12, 15], 1):
-#             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
-
-#         # Faylni saqlash
-#         filename = f"specification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-#         wb.save(filename)
-
-#         # Xodim ma’lumoti
-#         employee_name = session.employee_info.get('ism_familiya', 'Noma\'lum') if session.employee_info else 'Noma\'lum'
-
-#         # Caption
-#         caption = (
-#             f"📋 *Янги спецификация*\n"
-#             f"👤 Ходим: {employee_name}\n"
-#             f"🏥 Дорихона: {pharmacy['dorixona_nomi']}\n"
-#             f"💰 Асосий сумма: {total_original:,} so'm\n"
-#         )
-#         if session.discount_percentage > 0:
-#             caption += f"💸 Чегирма: {session.discount_percentage}% ({total_discount:,} so'm)\n"
-#         else:
-#             caption += f"💸 Чегирма: 0%\n"
-#         caption += f"💵 Якуний сумма: {total_final:,} so'm\n"
-#         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
-
-#         # Guruhga yuborish (xatolikni tutish bilan)
-#         try:
-#             with open(filename, 'rb') as file:
-#                 await application.bot.send_document(
-#                     chat_id=GROUP_CHAT_ID,
-#                     document=file,
-#                     filename=filename,
-#                     caption=caption,
-#                     parse_mode=ParseMode.MARKDOWN
-#                 )
-#         except Exception as send_err:
-#             logger.error(f"Error sending specification to group: {send_err}")
-
-#         # Faylni o'chirish
-#         try:
-#             os.remove(filename)
-#         except Exception as remove_err:
-#             logger.warning(f"Could not delete file {filename}: {remove_err}")
-
-#     except Exception as e:
-#         logger.error(f"Unexpected error in send_order_to_group: {e}")
-
 async def send_order_to_group(application, session, user_id):
     """Buyurtmani guruhga spetsifikatsiya sifatida yuborish"""
     try:
@@ -1819,11 +1669,7 @@ async def send_order_to_group(application, session, user_id):
 
         # Dorixona (pharmacy) ma'lumotlari
         pharmacy = session.current_pharmacy
-        if not pharmacy:
-            logger.error(f"No pharmacy data for user_id: {user_id}")
-            return
-
-        ws.cell(row=2, column=2, value=f"Приложение к дог №: {pharmacy.get('dagovor', 'N/A')}").font = Font(bold=True)
+        ws.cell(row=2, column=2, value=f"Приложение к дог №: {pharmacy['dagovor']}").font = Font(bold=True)
 
         # Поставщик
         supplier_data = [
@@ -1842,10 +1688,10 @@ async def send_order_to_group(application, session, user_id):
         mfo_formatted = str(int(float(mfo_value))).zfill(5) if mfo_value != 'N/A' and str(mfo_value).replace('.0', '').isdigit() else str(mfo_value)
 
         buyer_data = [
-            f"ПОКУПАТЕЛЬ: {pharmacy.get('dorixona_nomi', 'N/A')}",
-            f"АДРЕС: {pharmacy.get('manzil', 'N/A')}",
+            f"ПОКУПАТЕЛЬ: {pharmacy['dorixona_nomi']}",
+            f"АДРЕС: {pharmacy['manzil']}",
             f"ТЕЛ.: {pharmacy.get('telefon', 'N/A')}",
-            f"ИНН: {pharmacy.get('inn', 'N/A')}",
+            f"ИНН: {pharmacy['inn']}",
             f"Р/с: {pharmacy.get('rs', 'N/A')}",
             f"банк мфо: {mfo_formatted}"
         ]
@@ -1865,31 +1711,27 @@ async def send_order_to_group(application, session, user_id):
         total_original = total_nds = total_discount = total_final = 0
 
         for item in session.current_order:
-            try:
-                price_wo_nds = item['price'] / 1.12
-                nds = item['price'] - price_wo_nds
-                total_wo_nds = price_wo_nds * item['quantity']
-                total_nds_item = nds * item['quantity']
-                discount = item['total'] * session.discount_percentage / 100
-                final = item['total'] - discount
+            price_wo_nds = item['price'] / 1.12
+            nds = item['price'] - price_wo_nds
+            total_wo_nds = price_wo_nds * item['quantity']
+            total_nds_item = nds * item['quantity']
+            discount = item['total'] * session.discount_percentage / 100
+            final = item['total'] - discount
 
-                total_original += item['total']
-                total_nds += total_nds_item
-                total_discount += discount
-                total_final += final
+            total_original += item['total']
+            total_nds += total_nds_item
+            total_discount += discount
+            total_final += final
 
-                ws.cell(row=current_row, column=1, value=item.get('name', 'N/A'))
-                ws.cell(row=current_row, column=2, value=item.get('ikpu', 'N/A'))
-                ws.cell(row=current_row, column=3, value=item.get('quantity', 0))
-                ws.cell(row=current_row, column=4, value=round(item.get('price', 0), 2))
-                ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
-                ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
-                ws.cell(row=current_row, column=7, value=round(discount, 2))
-                ws.cell(row=current_row, column=8, value=round(final, 2))
-                current_row += 1
-            except KeyError as ke:
-                logger.error(f"Missing key in order item: {ke}, item: {item}")
-                continue
+            ws.cell(row=current_row, column=1, value=item['name'])
+            ws.cell(row=current_row, column=2, value=item['ikpu'])
+            ws.cell(row=current_row, column=3, value=item['quantity'])
+            ws.cell(row=current_row, column=4, value=round(item['price'], 2))
+            ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
+            ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
+            ws.cell(row=current_row, column=7, value=round(discount, 2))
+            ws.cell(row=current_row, column=8, value=round(final, 2))
+            current_row += 1
 
         # Итого
         ws.cell(row=current_row, column=4, value="ИТОГО:").font = Font(bold=True)
@@ -1923,20 +1765,16 @@ async def send_order_to_group(application, session, user_id):
 
         # Faylni saqlash
         filename = f"specification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        try:
-            wb.save(filename)
-        except Exception as save_err:
-            logger.error(f"Error saving Excel file {filename}: {save_err}")
-            return
+        wb.save(filename)
 
-        # Xodim ma'lumoti
+        # Xodim ma’lumoti
         employee_name = session.employee_info.get('ism_familiya', 'Noma\'lum') if session.employee_info else 'Noma\'lum'
 
         # Caption
         caption = (
             f"📋 *Янги спецификация*\n"
             f"👤 Ходим: {employee_name}\n"
-            f"🏥 Дорихона: {pharmacy.get('dorixona_nomi', 'N/A')}\n"
+            f"🏥 Дорихона: {pharmacy['dorixona_nomi']}\n"
             f"💰 Асосий сумма: {total_original:,} so'm\n"
         )
         if session.discount_percentage > 0:
@@ -1946,7 +1784,7 @@ async def send_order_to_group(application, session, user_id):
         caption += f"💵 Якуний сумма: {total_final:,} so'm\n"
         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
 
-        # Guruhga yuborish
+        # Guruhga yuborish (xatolikni tutish bilan)
         try:
             with open(filename, 'rb') as file:
                 await application.bot.send_document(
@@ -1957,13 +1795,7 @@ async def send_order_to_group(application, session, user_id):
                     parse_mode=ParseMode.MARKDOWN
                 )
         except Exception as send_err:
-            logger.error(f"Error sending specification to group (chat_id: {GROUP_CHAT_ID}): {send_err}")
-            await application.bot.send_message(
-                chat_id=user_id,
-                text="❌ Guruhga yuborishda xatolik yuz berdi! Iltimos, administrator bilan bog'laning.",
-                parse_mode=ParseMode.MARKDOWN
-            )
-            return
+            logger.error(f"Error sending specification to group: {send_err}")
 
         # Faylni o'chirish
         try:
@@ -1971,26 +1803,8 @@ async def send_order_to_group(application, session, user_id):
         except Exception as remove_err:
             logger.warning(f"Could not delete file {filename}: {remove_err}")
 
-        # Foydalanuvchiga muvaffaqiyat xabarini yuborish
-        try:
-            await application.bot.send_message(
-                chat_id=user_id,
-                text="✅ Buyurtma guruhga muvaffaqiyatli yuborildi!",
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as notify_err:
-            logger.error(f"Error notifying user {user_id}: {notify_err}")
-
     except Exception as e:
-        logger.error(f"Unexpected error in send_order_to_group for user {user_id}: {e}")
-        try:
-            await application.bot.send_message(
-                chat_id=user_id,
-                text="❌ Buyurtma yuborishda noma'lum xatolik yuz berdi! Iltimos, administrator bilan bog'laning.",
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as notify_err:
-            logger.error(f"Error notifying user {user_id} about failure: {notify_err}")
+        logger.error(f"Unexpected error in send_order_to_group: {e}")
 
 
 def main():
