@@ -38,7 +38,7 @@ DB_CONFIG = {
     'password': 'auktambek012',
     'port': 5432
 }
-GROUP_CHAT_ID = [-1002595759678]  # Buyurtmalar yuboriladigan guruh ID
+GROUP_CHAT_ID = [-1002595759678, -1002163331333]  # Buyurtmalar yuboriladigan guruh ID
 
 
 
