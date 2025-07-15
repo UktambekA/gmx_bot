@@ -1598,7 +1598,9 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     # Tasdiqlash (mavjud kod)
     elif data.startswith("confirm_"):
         if data == "confirm_yes":
-            await send_order_to_group(session, user_id)
+            # await send_order_to_group(application, session, user_id)
+            await send_order_to_group(context.application, session, user_id)
+
             
             session.current_order = []
             session.order_total = 0
@@ -1675,22 +1677,201 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-async def send_order_to_group(session, user_id):
+# async def send_order_to_group(session, user_id):
+#     """Buyurtmani guruhga spetsifikatsiya sifatida yuborish"""
+#     try:
+#         # Excel fayl yaratish
+#         wb = openpyxl.Workbook()
+#         ws = wb.active
+#         ws.title = "Спецификация"
+        
+#         # B1 katakchasiga sana
+#         ws.cell(row=1, column=2, value=f"Сана: {datetime.now().strftime('%d.%m.%Y')}").font = Font(bold=True)
+        
+#         # B2 katakchasiga dogovor raqami
+#         pharmacy = session.current_pharmacy
+#         ws.cell(row=2, column=2, value=f"Приложение к дог №: {pharmacy['dagovor']}").font = Font(bold=True)
+        
+#         # A ustunning 3-katakchadan keyingi qatorlarga поставщик ma'lumotlari
+#         supplier_data = [
+#             "ПОСТАВЩИК: MCHJ \"GYNOMEDIX\"",
+#             "АДРЕС: Toshkent shaxri Chilonzor tumani. Dumbirobod 4 tor kuchasi 23/2",
+#             "ТЕЛ.: 99 830-23-30",
+#             "ИНН: 311818897",
+#             "Р/с: 2020 8000 1071 8525 5001 МФО: 01095",
+#             "Регист. код плател. НДС: 326060260809"
+#         ]
+        
+#         # A ustuniga поставщик ma'lumotlarini yozish (3-qatordan boshlab)
+#         for idx, data in enumerate(supplier_data):
+#             ws.cell(row=3 + idx, column=1, value=data).font = Font(bold=True)
+        
+#         # G ustunning 5-katakchadan keyingi qatorlarga покупатель ma'lumotlari (B2dan keyin 2ta katakcha tashlab)
+#         # MFO qiymatini to'g'ri formatda olish
+#         mfo_value = pharmacy.get('mfo', 'N/A')
+#         if mfo_value != 'N/A' and str(mfo_value).replace('.0', '').isdigit():
+#             # Agar MFO raqam bo'lsa, uni 5 xonali string qilib format qilish
+#             mfo_formatted = str(int(float(mfo_value))).zfill(5)
+#         else:
+#             mfo_formatted = str(mfo_value) if mfo_value != 'N/A' else 'N/A'
+            
+#         buyer_data = [
+#             f"ПОКУПАТЕЛЬ: {pharmacy['dorixona_nomi']}",
+#             f"АДРЕС: {pharmacy['manzil']}",
+#             f"ТЕЛ.: {pharmacy.get('telefon', 'N/A')}",
+#             f"ИНН: {pharmacy['inn']}",
+#             f"Р/с: {pharmacy.get('rs', 'N/A')}",
+#             f"банк мфо: {mfo_formatted}"
+#         ]
+        
+#         # G ustuniga покупатель ma'lumotlarini yozish (5-qatordan boshlab - B2dan keyin 2ta katakcha tashlab)
+#         for idx, data in enumerate(buyer_data):
+#             ws.cell(row=3 + idx, column=7, value=data).font = Font(bold=True)
+        
+#         # Buyurtma jadvali uchun boshlang'ich qator
+#         table_start_row = 3 + max(len(supplier_data), len(buyer_data)) + 2  # 2 ta bo'sh qator
+        
+#         # Jadval sarlavhalari
+#         headers = ["Товар", "ИКПУ", "Количество", "Цена", "Сумма без НДС", 
+#                   "НДС (12%)", "Скидка", "Итоговая сумма"]
+        
+#         for col, header in enumerate(headers, 1):
+#             cell = ws.cell(row=table_start_row, column=col, value=header)
+#             cell.font = Font(bold=True)
+#             cell.alignment = Alignment(horizontal='center')
+        
+#         # Buyurtma ma'lumotlari
+#         current_row = table_start_row + 1
+#         total_original = 0
+#         total_nds = 0
+#         total_discount = 0
+#         total_final = 0
+        
+#         for item in session.current_order:
+#             # NDS hisobi (12%)
+#             price_without_nds = item['price'] / 1.12  # NDSsiz narx
+#             nds_amount = item['price'] - price_without_nds  # NDS miqdori
+            
+#             # Jami summa (miqdor * narx)
+#             total_without_nds = price_without_nds * item['quantity']
+#             total_nds_for_item = nds_amount * item['quantity']
+            
+#             # Chegirma hisobi
+#             discount_amount = item['total'] * session.discount_percentage / 100
+#             final_price = item['total'] - discount_amount
+            
+#             total_original += item['total']
+#             total_nds += total_nds_for_item
+#             total_discount += discount_amount
+#             total_final += final_price
+            
+#             # Ma'lumotlarni yozish
+#             ws.cell(row=current_row, column=1, value=item['name'])
+#             ws.cell(row=current_row, column=2, value=item['ikpu'])
+#             ws.cell(row=current_row, column=3, value=item['quantity'])
+#             ws.cell(row=current_row, column=4, value=round(item['price'], 2))
+#             ws.cell(row=current_row, column=5, value=round(total_without_nds, 2))
+#             ws.cell(row=current_row, column=6, value=round(total_nds_for_item, 2))
+#             ws.cell(row=current_row, column=7, value=round(discount_amount, 2))
+#             ws.cell(row=current_row, column=8, value=round(final_price, 2))
+#             current_row += 1
+        
+#         # Jami qatorini qo'shish
+#         ws.cell(row=current_row, column=4, value="ИТОГО:").font = Font(bold=True)
+#         ws.cell(row=current_row, column=5, value=round(total_original / 1.12, 2)).font = Font(bold=True)
+#         ws.cell(row=current_row, column=6, value=round(total_nds, 2)).font = Font(bold=True)
+#         ws.cell(row=current_row, column=7, value=round(total_discount, 2)).font = Font(bold=True)
+#         ws.cell(row=current_row, column=8, value=round(total_final, 2)).font = Font(bold=True)
+        
+#         # Imzo qismlari uchun qatorlar
+#         signature_row = current_row + 3  # 2 ta bo'sh qator qo'shish
+        
+#         # ПОСТАВЩИК imzosi (A ustun)
+#         ws.cell(row=signature_row, column=1, value="ПОСТАВЩИК").font = Font(bold=True)
+#         ws.cell(row=signature_row + 1, column=1, value="Директор: RAXMONOV P.M. _______________").font = Font(bold=True)
+#         ws.cell(row=signature_row + 2, column=1, value="М.П").font = Font(bold=True)
+        
+#         # ПОКУПАТЕЛЬ imzosi (G ustun)
+#         ws.cell(row=signature_row, column=7, value="ПОКУПАТЕЛЬ").font = Font(bold=True)
+#         ws.cell(row=signature_row + 1, column=7, value="Директор: ____________________").font = Font(bold=True)
+#         ws.cell(row=signature_row + 2, column=7, value="М.П").font = Font(bold=True)
+        
+#         # Jadval chegaralarini qo'shish (faqat ma'lumotlar jadvali uchun)
+#         thin_border = Border(
+#             left=Side(style='thin'),
+#             right=Side(style='thin'),
+#             top=Side(style='thin'),
+#             bottom=Side(style='thin')
+#         )
+        
+#         # Jadval sarlavhasi va ma'lumotlar uchun chegaralar
+#         for row_num in range(table_start_row, current_row + 1):
+#             for col_num in range(1, 9):  # 8 ustun
+#                 ws.cell(row=row_num, column=col_num).border = thin_border
+        
+#         # Ustunlar kengligini sozlash
+#         ws.column_dimensions['A'].width = 50  # ПОСТАВЩИК uchun
+#         ws.column_dimensions['B'].width = 20  # Sana va dogovor uchun
+#         ws.column_dimensions['G'].width = 50  # ПОКУПАТЕЛЬ uchun
+#         column_widths = [30, 15, 12, 12, 15, 12, 12, 15]  # Jadval ustunlari uchun
+#         for i, width in enumerate(column_widths, 1):
+#             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+        
+#         # Faylni saqlash
+#         filename = f"specification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+#         wb.save(filename)
+        
+#         # Xodim ma'lumotini olish
+#         employee_name = session.employee_info.get('ism_familiya', 'Noma\'lum') if session.employee_info else 'Noma\'lum'
+        
+#         # Guruhga yuborish
+#         app = Application.builder().token(BOT_TOKEN).build()
+        
+#         caption = f"📋 **Янги спецификация**\n"
+#         caption += f"👤 Ходим: {employee_name}\n"
+#         caption += f"🏥 Дорихона: {pharmacy['dorixona_nomi']}\n"
+#         caption += f"💰 Асосий сумма: {total_original:,} so'm\n"
+        
+#         if session.discount_percentage > 0:
+#             caption += f"% Чегирма сумма миқдори: {session.discount_percentage}% ({total_discount:,} so'm)\n"
+#         else:
+#             caption += f"% Чегирма сумма миқдори: 0%\n"
+            
+#         caption += f"💵 Якуний сумма: {total_final:,} so'm\n"
+#         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        
+#         with open(filename, 'rb') as file:
+#             await app.bot.send_document(
+#                 chat_id=GROUP_CHAT_ID,
+#                 document=file,
+#                 filename=filename,
+#                 caption=caption,
+#                 parse_mode=ParseMode.MARKDOWN
+#             )
+        
+#         # Faylni o'chirish
+#         os.remove(filename)
+        
+#     except Exception as e:
+#         logger.error(f"Error sending specification to group: {e}")
+
+
+async def send_order_to_group(application, session, user_id):
     """Buyurtmani guruhga spetsifikatsiya sifatida yuborish"""
     try:
         # Excel fayl yaratish
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Спецификация"
-        
-        # B1 katakchasiga sana
+
+        # Sana
         ws.cell(row=1, column=2, value=f"Сана: {datetime.now().strftime('%d.%m.%Y')}").font = Font(bold=True)
-        
-        # B2 katakchasiga dogovor raqami
+
+        # Dorixona (pharmacy) ma'lumotlari
         pharmacy = session.current_pharmacy
         ws.cell(row=2, column=2, value=f"Приложение к дог №: {pharmacy['dagovor']}").font = Font(bold=True)
-        
-        # A ustunning 3-katakchadan keyingi qatorlarga поставщик ma'lumotlari
+
+        # Поставщик
         supplier_data = [
             "ПОСТАВЩИК: MCHJ \"GYNOMEDIX\"",
             "АДРЕС: Toshkent shaxri Chilonzor tumani. Dumbirobod 4 tor kuchasi 23/2",
@@ -1699,20 +1880,13 @@ async def send_order_to_group(session, user_id):
             "Р/с: 2020 8000 1071 8525 5001 МФО: 01095",
             "Регист. код плател. НДС: 326060260809"
         ]
-        
-        # A ustuniga поставщик ma'lumotlarini yozish (3-qatordan boshlab)
         for idx, data in enumerate(supplier_data):
             ws.cell(row=3 + idx, column=1, value=data).font = Font(bold=True)
-        
-        # G ustunning 5-katakchadan keyingi qatorlarga покупатель ma'lumotlari (B2dan keyin 2ta katakcha tashlab)
-        # MFO qiymatini to'g'ri formatda olish
+
+        # Покупатель
         mfo_value = pharmacy.get('mfo', 'N/A')
-        if mfo_value != 'N/A' and str(mfo_value).replace('.0', '').isdigit():
-            # Agar MFO raqam bo'lsa, uni 5 xonali string qilib format qilish
-            mfo_formatted = str(int(float(mfo_value))).zfill(5)
-        else:
-            mfo_formatted = str(mfo_value) if mfo_value != 'N/A' else 'N/A'
-            
+        mfo_formatted = str(int(float(mfo_value))).zfill(5) if mfo_value != 'N/A' and str(mfo_value).replace('.0', '').isdigit() else str(mfo_value)
+
         buyer_data = [
             f"ПОКУПАТЕЛЬ: {pharmacy['dorixona_nomi']}",
             f"АДРЕС: {pharmacy['manzil']}",
@@ -1721,137 +1895,116 @@ async def send_order_to_group(session, user_id):
             f"Р/с: {pharmacy.get('rs', 'N/A')}",
             f"банк мфо: {mfo_formatted}"
         ]
-        
-        # G ustuniga покупатель ma'lumotlarini yozish (5-qatordan boshlab - B2dan keyin 2ta katakcha tashlab)
         for idx, data in enumerate(buyer_data):
             ws.cell(row=3 + idx, column=7, value=data).font = Font(bold=True)
-        
-        # Buyurtma jadvali uchun boshlang'ich qator
-        table_start_row = 3 + max(len(supplier_data), len(buyer_data)) + 2  # 2 ta bo'sh qator
-        
-        # Jadval sarlavhalari
-        headers = ["Товар", "ИКПУ", "Количество", "Цена", "Сумма без НДС", 
-                  "НДС (12%)", "Скидка", "Итоговая сумма"]
-        
+
+        # Jadval
+        table_start_row = 3 + max(len(supplier_data), len(buyer_data)) + 2
+        headers = ["Товар", "ИКПУ", "Количество", "Цена", "Сумма без НДС", "НДС (12%)", "Скидка", "Итоговая сумма"]
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=table_start_row, column=col, value=header)
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal='center')
-        
-        # Buyurtma ma'lumotlari
+
+        # Ma'lumotlar
         current_row = table_start_row + 1
-        total_original = 0
-        total_nds = 0
-        total_discount = 0
-        total_final = 0
-        
+        total_original = total_nds = total_discount = total_final = 0
+
         for item in session.current_order:
-            # NDS hisobi (12%)
-            price_without_nds = item['price'] / 1.12  # NDSsiz narx
-            nds_amount = item['price'] - price_without_nds  # NDS miqdori
-            
-            # Jami summa (miqdor * narx)
-            total_without_nds = price_without_nds * item['quantity']
-            total_nds_for_item = nds_amount * item['quantity']
-            
-            # Chegirma hisobi
-            discount_amount = item['total'] * session.discount_percentage / 100
-            final_price = item['total'] - discount_amount
-            
+            price_wo_nds = item['price'] / 1.12
+            nds = item['price'] - price_wo_nds
+            total_wo_nds = price_wo_nds * item['quantity']
+            total_nds_item = nds * item['quantity']
+            discount = item['total'] * session.discount_percentage / 100
+            final = item['total'] - discount
+
             total_original += item['total']
-            total_nds += total_nds_for_item
-            total_discount += discount_amount
-            total_final += final_price
-            
-            # Ma'lumotlarni yozish
+            total_nds += total_nds_item
+            total_discount += discount
+            total_final += final
+
             ws.cell(row=current_row, column=1, value=item['name'])
             ws.cell(row=current_row, column=2, value=item['ikpu'])
             ws.cell(row=current_row, column=3, value=item['quantity'])
             ws.cell(row=current_row, column=4, value=round(item['price'], 2))
-            ws.cell(row=current_row, column=5, value=round(total_without_nds, 2))
-            ws.cell(row=current_row, column=6, value=round(total_nds_for_item, 2))
-            ws.cell(row=current_row, column=7, value=round(discount_amount, 2))
-            ws.cell(row=current_row, column=8, value=round(final_price, 2))
+            ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
+            ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
+            ws.cell(row=current_row, column=7, value=round(discount, 2))
+            ws.cell(row=current_row, column=8, value=round(final, 2))
             current_row += 1
-        
-        # Jami qatorini qo'shish
+
+        # Итого
         ws.cell(row=current_row, column=4, value="ИТОГО:").font = Font(bold=True)
         ws.cell(row=current_row, column=5, value=round(total_original / 1.12, 2)).font = Font(bold=True)
         ws.cell(row=current_row, column=6, value=round(total_nds, 2)).font = Font(bold=True)
         ws.cell(row=current_row, column=7, value=round(total_discount, 2)).font = Font(bold=True)
         ws.cell(row=current_row, column=8, value=round(total_final, 2)).font = Font(bold=True)
-        
-        # Imzo qismlari uchun qatorlar
-        signature_row = current_row + 3  # 2 ta bo'sh qator qo'shish
-        
-        # ПОСТАВЩИК imzosi (A ustun)
+
+        # Imzolar
+        signature_row = current_row + 3
         ws.cell(row=signature_row, column=1, value="ПОСТАВЩИК").font = Font(bold=True)
         ws.cell(row=signature_row + 1, column=1, value="Директор: RAXMONOV P.M. _______________").font = Font(bold=True)
         ws.cell(row=signature_row + 2, column=1, value="М.П").font = Font(bold=True)
-        
-        # ПОКУПАТЕЛЬ imzosi (G ustun)
+
         ws.cell(row=signature_row, column=7, value="ПОКУПАТЕЛЬ").font = Font(bold=True)
         ws.cell(row=signature_row + 1, column=7, value="Директор: ____________________").font = Font(bold=True)
         ws.cell(row=signature_row + 2, column=7, value="М.П").font = Font(bold=True)
-        
-        # Jadval chegaralarini qo'shish (faqat ma'lumotlar jadvali uchun)
-        thin_border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
-        
-        # Jadval sarlavhasi va ma'lumotlar uchun chegaralar
-        for row_num in range(table_start_row, current_row + 1):
-            for col_num in range(1, 9):  # 8 ustun
-                ws.cell(row=row_num, column=col_num).border = thin_border
-        
-        # Ustunlar kengligini sozlash
-        ws.column_dimensions['A'].width = 50  # ПОСТАВЩИК uchun
-        ws.column_dimensions['B'].width = 20  # Sana va dogovor uchun
-        ws.column_dimensions['G'].width = 50  # ПОКУПАТЕЛЬ uchun
-        column_widths = [30, 15, 12, 12, 15, 12, 12, 15]  # Jadval ustunlari uchun
-        for i, width in enumerate(column_widths, 1):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
-        
+
+        # Chegaralar
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        for row in range(table_start_row, current_row + 1):
+            for col in range(1, 9):
+                ws.cell(row=row, column=col).border = thin_border
+
+        # Kengliklar
+        ws.column_dimensions['A'].width = 50
+        ws.column_dimensions['B'].width = 20
+        ws.column_dimensions['G'].width = 50
+        for i, w in enumerate([30, 15, 12, 12, 15, 12, 12, 15], 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
         # Faylni saqlash
         filename = f"specification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         wb.save(filename)
-        
-        # Xodim ma'lumotini olish
+
+        # Xodim ma’lumoti
         employee_name = session.employee_info.get('ism_familiya', 'Noma\'lum') if session.employee_info else 'Noma\'lum'
-        
-        # Guruhga yuborish
-        app = Application.builder().token(BOT_TOKEN).build()
-        
-        caption = f"📋 **Янги спецификация**\n"
-        caption += f"👤 Ходим: {employee_name}\n"
-        caption += f"🏥 Дорихона: {pharmacy['dorixona_nomi']}\n"
-        caption += f"💰 Асосий сумма: {total_original:,} so'm\n"
-        
+
+        # Caption
+        caption = (
+            f"📋 *Янги спецификация*\n"
+            f"👤 Ходим: {employee_name}\n"
+            f"🏥 Дорихона: {pharmacy['dorixona_nomi']}\n"
+            f"💰 Асосий сумма: {total_original:,} so'm\n"
+        )
         if session.discount_percentage > 0:
-            caption += f"% Чегирма сумма миқдори: {session.discount_percentage}% ({total_discount:,} so'm)\n"
+            caption += f"💸 Чегирма: {session.discount_percentage}% ({total_discount:,} so'm)\n"
         else:
-            caption += f"% Чегирма сумма миқдори: 0%\n"
-            
+            caption += f"💸 Чегирма: 0%\n"
         caption += f"💵 Якуний сумма: {total_final:,} so'm\n"
         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
-        
-        with open(filename, 'rb') as file:
-            await app.bot.send_document(
-                chat_id=GROUP_CHAT_ID,
-                document=file,
-                filename=filename,
-                caption=caption,
-                parse_mode=ParseMode.MARKDOWN
-            )
-        
+
+        # Guruhga yuborish (xatolikni tutish bilan)
+        try:
+            with open(filename, 'rb') as file:
+                await application.bot.send_document(
+                    chat_id=GROUP_CHAT_ID,
+                    document=file,
+                    filename=filename,
+                    caption=caption,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+        except Exception as send_err:
+            logger.error(f"Error sending specification to group: {send_err}")
+
         # Faylni o'chirish
-        os.remove(filename)
-        
+        try:
+            os.remove(filename)
+        except Exception as remove_err:
+            logger.warning(f"Could not delete file {filename}: {remove_err}")
+
     except Exception as e:
-        logger.error(f"Error sending specification to group: {e}")
+        logger.error(f"Unexpected error in send_order_to_group: {e}")
 
 
 # def main():
