@@ -729,8 +729,8 @@ def get_main_menu_keyboard():
 def payment_method_keyboard():
     """To'lov usulini tanlash klaviaturasi"""
     keyboard = [
-        [InlineKeyboardButton("1-variant: Pul ko'chirish usuli", callback_data="payment_method_transfer")],
-        [InlineKeyboardButton("2-variant: Naxt", callback_data="payment_method_cash")]
+        [InlineKeyboardButton("1-вариант: Пул кўчириш", callback_data="payment_method_transfer")],
+        [InlineKeyboardButton("2-вариант: Нахт пул", callback_data="payment_method_cash")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -1793,7 +1793,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
 
     # YANGI: To'lov usulini tanlash
     if data.startswith("payment_method_"):
-        session.payment_method = "Pul ko'chirish usuli" if data == "payment_method_transfer" else "Naxt"
+        session.payment_method = "1-вариант: Пул кўчириш усули" if data == "payment_method_transfer" else "2-вариант: Нахт пул"
         session.state = "payment_selection" # Keyingi holatga o'tish
         
         # Endi avvalgi to'lov turini tanlash keyboardini ko'rsatamiz
