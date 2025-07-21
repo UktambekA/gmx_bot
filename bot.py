@@ -357,6 +357,7 @@ class UserSession:
         self.discount_percentage = 0
         self.state = "idle"
         self.permanently_authorized = False
+        self.payment_method = None
 
 
 
@@ -656,7 +657,7 @@ def get_medicines_keyboard(medicines, page=0, per_page=10):
     # Har bir dori uchun tugma (faqat nom va narx)
     for medicine in current_medicines:
         keyboard.append([InlineKeyboardButton(
-            f"💊 {medicine['dori_nomi']} - {medicine['narxi']:,} so'm",
+            f"💊 {medicine['dori_nomi']} - {medicine['narxi']:,} сўм",
             callback_data=f"select_medicine_{medicine['id']}"
         )])
     
@@ -725,6 +726,13 @@ def get_main_menu_keyboard():
 
 
 
+def payment_method_keyboard():
+    """To'lov usulini tanlash klaviaturasi"""
+    keyboard = [
+        [InlineKeyboardButton("1-variant: Pul ko'chirish usuli", callback_data="payment_method_transfer")],
+        [InlineKeyboardButton("2-variant: Naxt", callback_data="payment_method_cash")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 
 
@@ -1241,7 +1249,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await update.message.reply_text(
                         f"📋 *Буюртма хулосаси:*\n"
                         f"🏥 Дорихона: {session.current_pharmacy['dorixona_nomi']}\n"
-                        f"💰 Умумий сумма: {session.order_total:,} so'm\n\n"
+                        f"💰 Умумий сумма: {session.order_total:,} сўм\n\n"
                         "Тўлов турини танланг:",
                         parse_mode=ParseMode.MARKDOWN,
                         reply_markup=get_payment_keyboard()
@@ -1292,8 +1300,8 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             
             await update.message.reply_text(
                 f"✅ Қўшилди: {medicine['dori_nomi']} x {quantity}\n"
-                f"💰 Сумма: {item_total:,} so'm\n"
-                f"📊 Умумий сумма: {session.order_total:,} so'm\n\n"
+                f"💰 Сумма: {item_total:,} сўм\n"
+                f"📊 Умумий сумма: {session.order_total:,} сўм\n\n"
                 "Яна қўшиш учун киритинг ёки 'тугади' деб ёзинг:"
             )
             
@@ -1383,6 +1391,243 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 
+
+# async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     """Callback query larni qayta ishlash"""
+#     query = update.callback_query
+#     user_id = query.from_user.id
+#     data = query.data
+    
+#     await query.answer()
+    
+#     if user_id not in user_sessions:
+#         return
+    
+#     session = user_sessions[user_id]
+
+#     # Dorixona tasdiqlash
+#     if data.startswith("confirm_pharmacy"):
+#         if data == "confirm_pharmacy_yes":
+#             session.state = "waiting_pharmacy_location"  # YANGI holat
+#             await query.edit_message_text(
+#                 "✅ Дорихона тасдиқланди!\n"
+#                 "📍 Геолокациянгизни юборинг:",
+#                 reply_markup=None
+#             )
+#             await query.message.reply_text(
+#                 "Қуйидаги тугмани босиб геолокациянгизни юборинг:",
+#                 reply_markup=get_location_request_keyboard()
+#             )
+#         else:
+#             session.current_pharmacy = None
+#             session.state = "pharmacy_search"
+#             await query.edit_message_text(
+#                 "❌ Дорихона бекор қилинди!\n"
+#                 "Қайтадан ИНН рақами ёки ном киритинг:",
+#                 reply_markup=None
+#             )
+#         return
+
+#     # YANGI: Dori tanlash (handle_callback_query ichida bu qismni almashtiring)
+#     if data.startswith("select_medicine_"):
+#         medicine_id = int(data.split("_")[2])
+#         medicines = db_manager.get_all_medicines()
+#         medicine = next((m for m in medicines if m['id'] == medicine_id), None)
+        
+#         if medicine:
+#             context.user_data['selected_medicine'] = medicine
+#             session.state = "quantity_input"
+            
+#             # Avval rasmni yuborish (agar mavjud bo'lsa)
+#             if medicine.get('image_file_id'):
+#                 try:
+#                     # Rasm va ma'lumot bilan birga yuborish
+#                     caption = f"💊 **{medicine['dori_nomi']}**\n"
+#                     caption += f"💰 Нарх: {medicine['narxi']:,} сўм\n"
+#                     caption += f"🏷️ ИКПУ: {medicine['ikpu']}\n\n"
+                    
+#                     # Info mavjud bo'lsa qo'shish
+#                     if medicine.get('info'):
+#                         caption += f"ℹ️ **Маълумот:**\n{medicine['info']}\n\n"
+                    
+#                     caption += "📝 Дори учун миқдор киритинг:"
+                    
+#                     await query.message.reply_photo(
+#                         photo=medicine['image_file_id'],
+#                         caption=caption,
+#                         parse_mode=ParseMode.MARKDOWN
+#                     )
+                    
+#                     # Eski xabarni o'chirish
+#                     await query.delete_message()
+                    
+#                 except Exception as e:
+#                     logger.error(f"Rasm yuborishda xatolik: {e}")
+#                     # Agar rasm yuborilmasa, oddiy matn yuborish
+#                     await query.edit_message_text(
+#                         f"💊 **{medicine['dori_nomi']}**\n"
+#                         f"💰 Нарх: {medicine['narxi']:,} сўм\n"
+#                         f"🏷️ ИКПУ: {medicine['ikpu']}\n\n"
+#                         f"ℹ️ **Маълумот:**\n{medicine.get('info', 'Маълумот мавжуд эмас')}\n\n"
+#                         "📝 Дори учун миқдор киритинг:",
+#                         parse_mode=ParseMode.MARKDOWN
+#                     )
+#             else:
+#                 # Rasm mavjud emas, faqat matn
+#                 await query.edit_message_text(
+#                     f"💊 **{medicine['dori_nomi']}**\n"
+#                     f"💰 Нарх: {medicine['narxi']:,} сўм\n"
+#                     f"🏷️ ИКПУ: {medicine['ikpu']}\n\n"
+#                     f"ℹ️ **Маълумот:**\n{medicine.get('info', 'Маълумот мавжуд эмас')}\n\n"
+#                     "📝 Дори учун миқдор киритинг:",
+#                     parse_mode=ParseMode.MARKDOWN
+#                 )
+#         return
+
+
+
+
+
+
+    
+
+
+
+
+
+
+    
+
+
+
+
+
+    
+
+#     # YANGI: Sahifalash
+#     if data.startswith("page_"):
+#         page = int(data.split("_")[1])
+#         medicines = db_manager.get_all_medicines()
+        
+#         await query.edit_message_reply_markup(
+#             reply_markup=get_medicines_keyboard(medicines, page)
+#         )
+#         return
+
+#     # YANGI: Miqdorni tahrirlash
+#     if data.startswith("edit_quantity_"):
+#         medicine_id = int(data.split("_")[2])
+#         medicines = db_manager.get_all_medicines()
+#         medicine = next((m for m in medicines if m['id'] == medicine_id), None)
+        
+#         if medicine:
+#             context.user_data['edit_medicine'] = medicine
+#             session.state = "edit_quantity"
+            
+#             await query.edit_message_text(
+#                 f"✏️ **{medicine['dori_nomi']}** дори учун янги миқдор киритинг:",
+#                 parse_mode=ParseMode.MARKDOWN
+#             )
+#         return
+    
+#     # YANGI: Orqaga qaytish
+#     if data == "back_to_medicines":
+#         medicines = db_manager.get_all_medicines()
+        
+#         await query.edit_message_text(
+#             f"🏥 **{session.current_pharmacy['dorixona_nomi']}** учун буюртма\n\n"
+#             "💊 Қуйидаги дорилардан танланг:",
+#             parse_mode=ParseMode.MARKDOWN,
+#             reply_markup=get_medicines_keyboard(medicines)
+#         )
+#         return
+    
+#     # YANGI: Buyurtmani yakunlash
+#     if data == "finish_order":
+#         if session.current_order:
+#             session.state = "payment_selection"
+#             order_summary = "📋 **Buyurtm:**\n\n"
+#             for item in session.current_order:
+#                 order_summary += f"💊 {item['name']} x {item['quantity']} = {item['total']:,} сўм\n"
+            
+#             order_summary += f"\n💰 **Умумий сумма: {session.order_total:,} сўм**\n\n"
+#             order_summary += "Тўлов турини танланг:"
+            
+#             await query.edit_message_text(
+#                 order_summary,
+#                 parse_mode=ParseMode.MARKDOWN,
+#                 reply_markup=get_payment_keyboard()
+#             )
+#         else:
+#             await query.edit_message_text("❌ Буюртма бўш!")
+#         return
+    
+#     # YANGI: Buyurtmani bekor qilish
+#     if data == "cancel_order":
+#         session.current_order = []
+#         session.order_total = 0
+#         session.state = "idle"
+        
+#         await query.edit_message_text(
+#             "❌ Буюртма бекор қилинди!",
+#             reply_markup=None
+#         )
+#         return
+
+#     # To'lov tanlash (mavjud kod)
+#     if data.startswith("payment_"):
+#         if data == "payment_100":
+#             if session.order_total >= 6000000:
+#                 session.discount_percentage = 8
+#             elif session.order_total >= 3000000:
+#                 session.discount_percentage = 5
+#             else:
+#                 session.discount_percentage = 0
+#         else:
+#             session.discount_percentage = 0
+        
+#         discount_amount = session.order_total * session.discount_percentage / 100
+#         final_amount = session.order_total - discount_amount
+        
+#         payment_info = f"💳 **Тўлов маълумотлари:**\n"
+#         payment_info += f"💰 Асосий сумма: {session.order_total:,} сўм\n"
+        
+#         if session.discount_percentage > 0:
+#             payment_info += f"🎯 Чегирма: {session.discount_percentage}% ({discount_amount:,} сўм)\n"
+#             payment_info += f"💵 Якуний сумма: {final_amount:,} сўм\n"
+        
+#         payment_info += f"📊 Тўлов: {'100%' if data == 'payment_100' else '50%'}\n\n"
+#         payment_info += "Буюртмани тасдиқлайсизми?"
+        
+#         await query.edit_message_text(
+#             payment_info,
+#             parse_mode=ParseMode.MARKDOWN,
+#             reply_markup=get_confirm_keyboard()
+#         )
+
+#     # Tasdiqlash (mavjud kod)
+#     elif data.startswith("confirm_"):
+#         if data == "confirm_yes":
+#             # `context.application` ni `send_order_to_group` ga uzatish
+#             await send_order_to_group(context.application, session, user_id)
+
+#             session.current_order = []
+#             session.order_total = 0
+#             session.discount_percentage = 0
+#             session.state = "idle"
+            
+#             await query.edit_message_text(
+#                 "✅ Буюртма тасдиқланди ва гуруҳга юборилди!"
+#             )
+#         else:
+#             session.current_order = []
+#             session.order_total = 0
+#             session.discount_percentage = 0
+#             session.state = "idle"
+            
+#             await query.edit_message_text(
+#                 "❌ Буюртма бекор қилинди!"
+#             )
 
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Callback query larni qayta ishlash"""
@@ -1517,18 +1762,18 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     # YANGI: Buyurtmani yakunlash
     if data == "finish_order":
         if session.current_order:
-            session.state = "payment_selection"
-            order_summary = "📋 **Buyurtma xulosasi:**\n\n"
+            session.state = "payment_method_selection" # Yangi holat
+            order_summary = "📋 **Буюртма хулосаси:**\n\n"
             for item in session.current_order:
-                order_summary += f"💊 {item['name']} x {item['quantity']} = {item['total']:,} so'm\n"
+                order_summary += f"💊 {item['name']} x {item['quantity']} = {item['total']:,} сўм\n"
             
-            order_summary += f"\n💰 **Умумий сумма: {session.order_total:,} so'm**\n\n"
-            order_summary += "Тўлов турини танланг:"
+            order_summary += f"\n💰 **Умумий сумма: {session.order_total:,} сўм**\n\n"
+            order_summary += "Тўлов усулини танланг:" # Matnni o'zgartirdik
             
             await query.edit_message_text(
                 order_summary,
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=get_payment_keyboard()
+                reply_markup=payment_method_keyboard() # Yangi keyboard chaqirildi
             )
         else:
             await query.edit_message_text("❌ Буюртма бўш!")
@@ -1543,6 +1788,32 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_text(
             "❌ Буюртма бекор қилинди!",
             reply_markup=None
+        )
+        return
+
+    # YANGI: To'lov usulini tanlash
+    if data.startswith("payment_method_"):
+        session.payment_method = "Pul ko'chirish usuli" if data == "payment_method_transfer" else "Naxt"
+        session.state = "payment_selection" # Keyingi holatga o'tish
+        
+        # Endi avvalgi to'lov turini tanlash keyboardini ko'rsatamiz
+        discount_amount = session.order_total * session.discount_percentage / 100
+        final_amount = session.order_total - discount_amount
+        
+        payment_info = f"💳 **Тўлов маълумотлари:**\n"
+        payment_info += f"💰 Асосий сумма: {session.order_total:,} сўм\n"
+        
+        if session.discount_percentage > 0:
+            payment_info += f"🎯 Чегирма: {session.discount_percentage}% ({discount_amount:,} сўм)\n"
+            payment_info += f"💵 Якуний сумма: {final_amount:,} сўм\n"
+        
+        payment_info += f"📊 Тўлов усули: {session.payment_method}\n\n" # To'lov usulini qo'shdik
+        payment_info += "Тўлов turini tanlang (100% yoki 50%):" # Matnni o'zgartirdik
+        
+        await query.edit_message_text(
+            payment_info,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_payment_keyboard() # Avvalgi keyboard chaqirildi
         )
         return
 
@@ -1562,13 +1833,14 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         final_amount = session.order_total - discount_amount
         
         payment_info = f"💳 **Тўлов маълумотлари:**\n"
-        payment_info += f"💰 Асосий сумма: {session.order_total:,} so'm\n"
+        payment_info += f"💰 Асосий сумма: {session.order_total:,} сўм\n"
         
         if session.discount_percentage > 0:
-            payment_info += f"🎯 Чегирма: {session.discount_percentage}% ({discount_amount:,} so'm)\n"
-            payment_info += f"💵 Якуний сумма: {final_amount:,} so'm\n"
+            payment_info += f"🎯 Чегирма: {session.discount_percentage}% ({discount_amount:,} сўм)\n"
+            payment_info += f"💵 Якуний сумма: {final_amount:,} сўм\n"
         
-        payment_info += f"📊 Тўлов: {'100%' if data == 'payment_100' else '50%'}\n\n"
+        payment_info += f"📊 Тўлов: {'100%' if data == 'payment_100' else '50%'}\n"
+        payment_info += f"📊 Тўлов усули: {session.payment_method}\n\n" # To'lov usulini qo'shdik
         payment_info += "Буюртмани тасдиқлайсизми?"
         
         await query.edit_message_text(
@@ -1587,6 +1859,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
             session.order_total = 0
             session.discount_percentage = 0
             session.state = "idle"
+            session.payment_method = None # To'lov usulini ham tozalash
             
             await query.edit_message_text(
                 "✅ Буюртма тасдиқланди ва гуруҳга юборилди!"
@@ -1596,11 +1869,11 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
             session.order_total = 0
             session.discount_percentage = 0
             session.state = "idle"
+            session.payment_method = None # To'lov usulini ham tozalash
             
             await query.edit_message_text(
                 "❌ Буюртма бекор қилинди!"
             )
-
 
 
 
@@ -1775,13 +2048,13 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #             f"📋 *Янги спецификация*\n"
 #             f"👤 Ходим: {employee_name}\n"
 #             f"🏥 Дорихона: {pharmacy['dorixona_nomi']}\n"
-#             f"💰 Асосий сумма: {total_original:,} so'm\n"
+#             f"💰 Асосий сумма: {total_original:,} сўм\n"
 #         )
 #         if session.discount_percentage > 0:
-#             caption += f"💸 Чегирма: {session.discount_percentage}% ({total_discount:,} so'm)\n"
+#             caption += f"💸 Чегирма: {session.discount_percentage}% ({total_discount:,} сўм)\n"
 #         else:
 #             caption += f"💸 Чегирма: 0%\n"
-#         caption += f"💵 Якуний сумма: {total_final:,} so'm\n"
+#         caption += f"💵 Якуний сумма: {total_final:,} сўм\n"
 #         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
 
 #         # Guruhga yuborish (xatolikni tutish bilan)
@@ -1965,13 +2238,14 @@ async def send_order_to_group(application, session, user_id):
             f"📋 *Янги спецификация*\n"
             f"👤 Ходим: {employee_name}\n"
             f"🏥 Дорихона: {pharmacy_name}\n"
-            f"💰 Асосий сумма: {total_original:,.0f} so'm\n"
+            f"💰 Асосий сумма: {total_original:,.0f} сўм\n"
         )
         if discount_percentage > 0:
-            caption += f"💸 Чегирма: {discount_percentage}% ({total_discount:,.0f} so'm)\n"
+            caption += f"💸 Чегирма: {discount_percentage}% ({total_discount:,.0f} сўм)\n"
         else:
             caption += f"💸 Чегирма: 0%\n"
-        caption += f"💵 Якуний сумма: {total_final:,.0f} so'm\n"
+        caption += f"💵 Якуний сумма: {total_final:,.0f} сўм\n"
+        caption += f"📊 Тўлов усули: {session.payment_method}\n"
         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
 
         # Guruhga yuborish
