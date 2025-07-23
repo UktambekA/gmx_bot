@@ -20,7 +20,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboard
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from telegram.constants import ParseMode
 import openpyxl
-from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.styles import Font, Alignment, Border, Side, numbers
 
 # Logging sozlamalari
 logging.basicConfig(
@@ -2087,6 +2087,200 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, Border, Side
 from telegram.constants import ParseMode
 
+# async def send_order_to_group(application, session, user_id):
+#     """Buyurtmani guruhga spetsifikatsiya sifatida yuborish"""
+#     filename = None
+#     try:
+#         # Session va order tekshiruvi
+#         if not session or not session.current_order:
+#             logger.error("Session yoki current_order mavjud emas")
+#             return False
+            
+#         if not session.current_pharmacy:
+#             logger.error("Pharmacy ma'lumotlari mavjud emas")
+#             return False
+
+#         # Vaqtinchalik fayl yaratish
+#         with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_file:
+#             filename = tmp_file.name
+
+#         # Excel fayl yaratish
+#         wb = openpyxl.Workbook()
+#         ws = wb.active
+#         ws.title = "Спецификация"
+
+#         # Sana
+#         current_date = datetime.now().strftime('%d.%m.%Y')
+#         ws.cell(row=1, column=2, value=f"Сана: {current_date}").font = Font(bold=True)
+
+#         # Dorixona (pharmacy) ma'lumotlari
+#         pharmacy = session.current_pharmacy
+#         dagovor = pharmacy.get('dagovor', 'N/A')
+#         ws.cell(row=2, column=2, value=f"Приложение к дог №: {dagovor}").font = Font(bold=True)
+
+#         # Поставщик
+#         supplier_data = [
+#             "ПОСТАВЩИК: MCHJ \"GYNOMEDIX\"",
+#             "АДРЕС: Toshkent shaxri Chilonzor tumani. Dumbirobod 4 tor kuchasi 23/2",
+#             "ТЕЛ.: 99 830-23-30",
+#             "ИНН: 311818897",
+#             "Р/с: 2020 8000 1071 8525 5001 МФО: 01095",
+#             "Регист. код плател. НДС: 326060260809"
+#         ]
+#         for idx, data in enumerate(supplier_data):
+#             ws.cell(row=3 + idx, column=1, value=data).font = Font(bold=True)
+
+#         # Покупатель
+#         mfo_value = pharmacy.get('mfo', 'N/A')
+#         try:
+#             mfo_formatted = str(int(float(mfo_value))).zfill(5) if mfo_value != 'N/A' and str(mfo_value).replace('.0', '').isdigit() else str(mfo_value)
+#         except (ValueError, TypeError):
+#             mfo_formatted = str(mfo_value)
+
+#         buyer_data = [
+#             f"ПОКУПАТЕЛЬ: {pharmacy.get('dorixona_nomi', 'N/A')}",
+#             f"АДРЕС: {pharmacy.get('manzil', 'N/A')}",
+#             f"ТЕЛ.: {pharmacy.get('telefon', 'N/A')}",
+#             f"ИНН: {pharmacy.get('inn', 'N/A')}",
+#             f"Р/с: {pharmacy.get('rs', 'N/A')}",
+#             f"банк мфо: {mfo_formatted}"
+#         ]
+#         for idx, data in enumerate(buyer_data):
+#             ws.cell(row=3 + idx, column=7, value=data).font = Font(bold=True)
+
+#         # Jadval
+#         table_start_row = 3 + max(len(supplier_data), len(buyer_data)) + 2
+#         headers = ["Товар", "ИКПУ", "Количество", "Цена", "Сумма без НДС", "НДС (12%)", "Скидка", "Итоговая сумма"]
+#         for col, header in enumerate(headers, 1):
+#             cell = ws.cell(row=table_start_row, column=col, value=header)
+#             cell.font = Font(bold=True)
+#             cell.alignment = Alignment(horizontal='center')
+
+#         # Ma'lumotlar
+#         current_row = table_start_row + 1
+#         total_original = total_nds = total_discount = total_final = 0
+
+#         discount_percentage = getattr(session, 'discount_percentage', 0) or 0
+
+#         for item in session.current_order:
+#             try:
+#                 price = float(item.get('price', 0))
+#                 quantity = int(item.get('quantity', 0))
+#                 total_item = float(item.get('total', 0))
+                
+#                 price_wo_nds = price / 1.12
+#                 nds = price - price_wo_nds
+#                 total_wo_nds = price_wo_nds * quantity
+#                 total_nds_item = nds * quantity
+#                 discount = total_item * discount_percentage / 100
+#                 final = total_item - discount
+
+#                 total_original += total_item
+#                 total_nds += total_nds_item
+#                 total_discount += discount
+#                 total_final += final
+
+#                 ws.cell(row=current_row, column=1, value=item.get('name', 'N/A'))
+#                 ws.cell(row=current_row, column=2, value=item.get('ikpu', 'N/A'))
+#                 ws.cell(row=current_row, column=3, value=quantity)
+#                 ws.cell(row=current_row, column=4, value=round(price, 2))
+#                 ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
+#                 ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
+#                 ws.cell(row=current_row, column=7, value=round(discount, 2))
+#                 ws.cell(row=current_row, column=8, value=round(final, 2))
+#                 current_row += 1
+#             except (ValueError, TypeError, KeyError) as item_err:
+#                 logger.error(f"Error processing item {item}: {item_err}")
+#                 continue
+
+#         # Итого
+#         ws.cell(row=current_row, column=4, value="ИТОГО:").font = Font(bold=True)
+#         ws.cell(row=current_row, column=5, value=round(total_original / 1.12, 2)).font = Font(bold=True)
+#         ws.cell(row=current_row, column=6, value=round(total_nds, 2)).font = Font(bold=True)
+#         ws.cell(row=current_row, column=7, value=round(total_discount, 2)).font = Font(bold=True)
+#         ws.cell(row=current_row, column=8, value=round(total_final, 2)).font = Font(bold=True)
+
+#         # Imzolar
+#         signature_row = current_row + 3
+#         ws.cell(row=signature_row, column=1, value="ПОСТАВЩИК").font = Font(bold=True)
+#         ws.cell(row=signature_row + 1, column=1, value="Директор: RAXMONOV P.M. _______________").font = Font(bold=True)
+#         ws.cell(row=signature_row + 2, column=1, value="М.П").font = Font(bold=True)
+
+#         ws.cell(row=signature_row, column=7, value="ПОКУПАТЕЛЬ").font = Font(bold=True)
+#         ws.cell(row=signature_row + 1, column=7, value="Директор: ____________________").font = Font(bold=True)
+#         ws.cell(row=signature_row + 2, column=7, value="М.П").font = Font(bold=True)
+
+#         # Chegaralar
+#         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+#         for row in range(table_start_row, current_row + 1):
+#             for col in range(1, 9):
+#                 ws.cell(row=row, column=col).border = thin_border
+
+#         # Kengliklar
+#         ws.column_dimensions['A'].width = 50
+#         ws.column_dimensions['B'].width = 20
+#         ws.column_dimensions['G'].width = 50
+#         for i, w in enumerate([30, 15, 12, 12, 15, 12, 12, 15], 1):
+#             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+#         # Faylni saqlash
+#         wb.save(filename)
+#         wb.close()
+
+#         # Xodim ma'lumoti
+#         employee_name = 'Noma\'lum'
+#         if hasattr(session, 'employee_info') and session.employee_info:
+#             employee_name = session.employee_info.get('ism_familiya', 'Noma\'lum')
+
+#         # Caption
+#         pharmacy_name = pharmacy.get('dorixona_nomi', 'N/A')
+#         caption = (
+#             f"📋 *Янги спецификация*\n"
+#             f"👤 Ходим: {employee_name}\n"
+#             f"🏥 Дорихона: {pharmacy_name}\n"
+#             f"💰 Асосий сумма: {total_original:,.0f} сўм\n"
+#         )
+#         if discount_percentage > 0:
+#             caption += f"💸 Чегирма: {discount_percentage}% ({total_discount:,.0f} сўм)\n"
+#         else:
+#             caption += f"💸 Чегирма: 0%\n"
+#         caption += f"💵 Якуний сумма: {total_final:,.0f} сўм\n"
+#         caption += f"📊 Тўлов усули: {session.payment_method}\n"
+#         caption += f"📅 Сана: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+
+#         # Guruhga yuborish
+#         success = False
+#         try:
+#             # GROUP_CHAT_ID ni import qilish kerak
+#             with open(filename, 'rb') as file:
+#                 await application.bot.send_document(
+#                     chat_id=GROUP_CHAT_ID,
+#                     document=file,
+#                     filename=f"specification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+#                     caption=caption,
+#                     parse_mode=ParseMode.MARKDOWN
+#                 )
+#             success = True
+#             logger.info("Specification successfully sent to group")
+#         except Exception as send_err:
+#             logger.error(f"Error sending specification to group: {send_err}")
+#             success = False
+
+#         return success
+
+#     except Exception as e:
+#         logger.error(f"Unexpected error in send_order_to_group: {e}")
+#         return False
+#     finally:
+#         # Faylni o'chirish
+#         if filename and os.path.exists(filename):
+#             try:
+#                 os.remove(filename)
+#                 logger.debug(f"Temporary file {filename} deleted")
+#             except Exception as remove_err:
+#                 logger.warning(f"Could not delete file {filename}: {remove_err}")
+
+
 async def send_order_to_group(application, session, user_id):
     """Buyurtmani guruhga spetsifikatsiya sifatida yuborish"""
     filename = None
@@ -2108,6 +2302,9 @@ async def send_order_to_group(application, session, user_id):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Спецификация"
+
+        # Number format minglar ajratgichi bilan
+        number_format = '#,##0.00'
 
         # Sana
         current_date = datetime.now().strftime('%d.%m.%Y')
@@ -2180,25 +2377,52 @@ async def send_order_to_group(application, session, user_id):
                 total_discount += discount
                 total_final += final
 
+                # Ma'lumotlarni yozish
                 ws.cell(row=current_row, column=1, value=item.get('name', 'N/A'))
                 ws.cell(row=current_row, column=2, value=item.get('ikpu', 'N/A'))
                 ws.cell(row=current_row, column=3, value=quantity)
-                ws.cell(row=current_row, column=4, value=round(price, 2))
-                ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
-                ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
-                ws.cell(row=current_row, column=7, value=round(discount, 2))
-                ws.cell(row=current_row, column=8, value=round(final, 2))
+                
+                # Raqamli qiymatlar uchun format qo'llash
+                price_cell = ws.cell(row=current_row, column=4, value=round(price, 2))
+                price_cell.number_format = number_format
+                
+                total_wo_nds_cell = ws.cell(row=current_row, column=5, value=round(total_wo_nds, 2))
+                total_wo_nds_cell.number_format = number_format
+                
+                total_nds_cell = ws.cell(row=current_row, column=6, value=round(total_nds_item, 2))
+                total_nds_cell.number_format = number_format
+                
+                discount_cell = ws.cell(row=current_row, column=7, value=round(discount, 2))
+                discount_cell.number_format = number_format
+                
+                final_cell = ws.cell(row=current_row, column=8, value=round(final, 2))
+                final_cell.number_format = number_format
+                
                 current_row += 1
+                
             except (ValueError, TypeError, KeyError) as item_err:
                 logger.error(f"Error processing item {item}: {item_err}")
                 continue
 
         # Итого
         ws.cell(row=current_row, column=4, value="ИТОГО:").font = Font(bold=True)
-        ws.cell(row=current_row, column=5, value=round(total_original / 1.12, 2)).font = Font(bold=True)
-        ws.cell(row=current_row, column=6, value=round(total_nds, 2)).font = Font(bold=True)
-        ws.cell(row=current_row, column=7, value=round(total_discount, 2)).font = Font(bold=True)
-        ws.cell(row=current_row, column=8, value=round(total_final, 2)).font = Font(bold=True)
+        
+        # ИТОГО qatoridagi raqamlar uchun ham format qo'llash
+        total_original_cell = ws.cell(row=current_row, column=5, value=round(total_original / 1.12, 2))
+        total_original_cell.font = Font(bold=True)
+        total_original_cell.number_format = number_format
+
+        total_nds_cell = ws.cell(row=current_row, column=6, value=round(total_nds, 2))
+        total_nds_cell.font = Font(bold=True)
+        total_nds_cell.number_format = number_format
+
+        total_discount_cell = ws.cell(row=current_row, column=7, value=round(total_discount, 2))
+        total_discount_cell.font = Font(bold=True)
+        total_discount_cell.number_format = number_format
+
+        total_final_cell = ws.cell(row=current_row, column=8, value=round(total_final, 2))
+        total_final_cell.font = Font(bold=True)
+        total_final_cell.number_format = number_format
 
         # Imzolar
         signature_row = current_row + 3
@@ -2279,6 +2503,11 @@ async def send_order_to_group(application, session, user_id):
                 logger.debug(f"Temporary file {filename} deleted")
             except Exception as remove_err:
                 logger.warning(f"Could not delete file {filename}: {remove_err}")
+
+
+
+
+
 
 
 
